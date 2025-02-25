@@ -1,9 +1,8 @@
 name: Sync Fork
 
 on:
-  push:
-    branches:
-      - main  # 메인 브랜치에 변경 사항이 있을 때 실행
+  repository_dispatch:
+    types: [sync_fork]  # repository_dispatch 이벤트가 실행되면 시작
 
 jobs:
   sync-fork:
@@ -12,9 +11,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Send repository_dispatch event to fork
+      - name: Configure Git
         run: |
-          curl -X POST -H "Accept: application/vnd.github.v3+json" \
-          -H "Authorization: token ${{ secrets.FORK_SYNC_TOKEN }}" \
-          https://api.github.com/repos/minpppal/Auctify-client/dispatches \
-          -d '{"event_type": "sync_fork"}'
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Add upstream repository
+        run: git remote add upstream https://github.com/next-work-team/Auctify-client.git
+
+      - name: Fetch and merge upstream changes
+        run: |
+          git fetch upstream main
+          git merge upstream/main --allow-unrelated-histories
+
+      - name: Push changes to forked repository
+        run: git push origin main
